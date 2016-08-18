@@ -24,6 +24,12 @@ VT_tweets$datetime <- parse_date_time(VT_tweets$datetime, "Ymd HMS")
 UCC_tweets$datetime <- parse_date_time(UCC_tweets$datetime, "Ymd HMS")
 SH_tweets$datetime <- parse_date_time(SH_tweets$datetime, "Ymd HMS")
 
+#need this function so stemming will work
+stemfix <- function(x)
+{
+  as.character(paste(wordStem(unlist(strsplit(as.character(x), " "))),collapse=' '))
+}
+
 #remove retweets
 #VT remains 1180
 VT_tweets$retweet <- substr(VT_tweets$tweet, 1, 2) == 'RT'
@@ -34,6 +40,8 @@ VT_tweets$tweet_formatted <- translate_emojis(VT_tweets$tweet)
 VT_tweets$tweet_formatted <- tolower(VT_tweets$tweet_formatted)
 VT_tweets$tweet_formatted <- removeWords(VT_tweets$tweet_formatted, stopwords("english"))
 VT_tweets$tweet_formatted <- str_replace_all(VT_tweets$tweet_formatted, "[^[A-Za-z ]]", "")
+VT_tweets$letter_formatted <- lapply(VT_tweets$letter_formatted, function(x) stemfix(x))
+
 #calulate word count, add source and event columns
 VT_tweets$wordcount <- vapply(strsplit(VT_tweets$tweet_formatted, "\\W+"), length, integer(1))
 VT_tweets$source <- "twitter"

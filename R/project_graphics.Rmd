@@ -1,0 +1,169 @@
+---
+title: "Public Sphere Sentiment Following a School Shooting"
+output: html_document
+classoption: landscape
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE) #, fig.width = 8, fig.height = 6)
+```
+
+```{r }
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+
+load(file = 'summaries.rda')
+sentiment_grouped <- group_by(for_shiny, event, source.type)
+sentiment_grouped$date.event <- c( '2006-10-02', '1999-04-20', 
+                                   '2012-12-14', '2012-12-14', 
+                                   '2015-10-01', '2015-10-01', 
+                                   '2007-04-16', '2007-04-16')
+sentiment_grouped$date.event <- as.Date(sentiment_grouped$date.event)
+
+avg_sentiment <- summarise(sentiment_grouped,
+                           anger = anger,
+                           disgust = disgust,
+                           fear =  fear,
+                           sadness = sadness,
+                           surprise = surprise)%>% melt
+names(avg_sentiment) <- c('event', 'source', 'sentiment', 'score')
+vt_sentiment <- subset(avg_sentiment, event == 'VT')
+ucc_sentiment <- subset(avg_sentiment, event == 'UCC')
+sh_sentiment <- subset(avg_sentiment, event == 'SH')
+ami_sentiment <- subset(avg_sentiment, event == 'AMI')
+chs_sentiment <- subset(avg_sentiment, event == 'CHS')
+
+```
+
+###Time
+```{r time, echo = FALSE, fig.width = 4, fig.height = 3}
+par(mfrow = c(2,3))
+qplot(sentiment_grouped$date.event, sentiment_grouped$surprise, ylim = c(0, 0.2), ylab = "mean adjusted score", xlab = "year", main = "Surprise", colour = sentiment_grouped$source.type) + geom_line() + labs(colour = "source")
+# qplot(sentiment_grouped$date.event, sentiment_grouped$negative, ylim = c(0, 0.2), ylab = "mean adjusted score", xlab = "year", main = "Overall Negative Sentiment", colour = sentiment_grouped$source.type) + geom_line() + labs(colour = "source")
+qplot(sentiment_grouped$date.event, sentiment_grouped$anger, ylim = c(0, 0.2), ylab = "mean adjusted score", xlab = "year", main = "Anger", colour = sentiment_grouped$source.type) + geom_line() + labs(colour = "source")
+qplot(sentiment_grouped$date.event, sentiment_grouped$fear, ylim = c(0, 0.2), ylab = "mean adjusted score", xlab = "year", main = "Fear", colour = sentiment_grouped$source.type) + geom_line() + labs(colour = "source")
+qplot(sentiment_grouped$date.event, sentiment_grouped$disgust, ylim = c(0, 0.2), ylab = "mean adjusted score", xlab = "year", main = "Disgust", colour = sentiment_grouped$source.type) + geom_line() + labs(colour = "source")
+qplot(sentiment_grouped$date.event, sentiment_grouped$sadness, ylim = c(0, 0.2), ylab = "mean adjusted score", xlab = "year", main = "Sadness", colour = sentiment_grouped$source.type) + geom_line() + labs(colour = "source")
+
+```
+
+## Responsiveness 30-days after
+```{r}
+load(file = 'all_messages.rda')
+
+twitter_sandy_hook <- filter(all_messages, event == 'SH', source == 'twitter')
+twitter_virginia_tech <- filter(all_messages, event == 'VT', source == 'twitter')
+twitter_umpqua <- filter(all_messages, event == 'UCC', source == 'twitter')
+
+
+
+vt_tweets.by_date <- twitter_virginia_tech %>% group_by(date) %>% summarise(total = n())
+#qplot(vt_tweets.by_date$date, vt_tweets.by_date$total)
+vt_tweets.by_date$proportion <- vt_tweets.by_date$total/5000
+#qplot(vt_tweets.by_date$date, vt_tweets.by_date$proportion)
+
+sh_tweets.by_date <- twitter_sandy_hook %>% group_by(date) %>% summarise(total = n())
+#qplot(sh_tweets.by_date$date, sh_tweets.by_date$total)
+sh_tweets.by_date$proportion <- sh_tweets.by_date$total/400000000
+#qplot(sh_tweets.by_date$date, sh_tweets.by_date$proportion)
+
+ucc_tweets.by_date <- twitter_umpqua %>% group_by(date) %>% summarise(total = n())
+#qplot(ucc_tweets.by_date$date, ucc_tweets.by_date$total)
+ucc_tweets.by_date$proportion <- ucc_tweets.by_date$total/500000000
+#qplot(ucc_tweets.by_date$date, ucc_tweets.by_date$proportion)
+
+vt_tweets.by_date$days.from.event <- vt_tweets.by_date$date - as.Date('2007-04-16')
+sh_tweets.by_date$days.from.event <- sh_tweets.by_date$date - as.Date('2012-12-14')
+ucc_tweets.by_date$days.from.event <- ucc_tweets.by_date$date - as.Date('2015-10-01')
+
+
+ucc_tweets.by_date$event <- 'Umpqua Community College'
+sh_tweets.by_date$event <- 'Sandy Hook Elementary'
+vt_tweets.by_date$event <- 'Virginia Tech'
+
+tweets_by_date <- rbind(ucc_tweets.by_date, sh_tweets.by_date)
+tweets_by_date <- rbind(tweets_by_date, vt_tweets.by_date)
+tweets_by_date$days.from.event <- as.integer(tweets_by_date$days.from.event)
+
+ggplot(tweets_by_date, aes(days.from.event, total)) +
+       geom_line(aes(colour = event))  
+  
+ggplot(tweets_by_date, aes(days.from.event, proportion)) +
+       geom_line(aes(colour = event))  
+
+
+# 5000; 400,000,000; 500,000,000
+
+```
+
+
+
+```{r}
+
+
+```{r }
+#par(mfrow = c(2,2))
+load("avg_sentiment.rda")
+load("all_sentiment.rda")
+
+avg_letter_sentiment <- subset(avg_sentiment, source == 'Letter')
+avg_twitter_sentiment <- subset(avg_sentiment, source == 'Twitter')
+
+qplot(event_order, score, data = all_sentiment, 
+      color = sentiment, geom = "line") +
+    ggtitle("Tweets & Letters") + xlab("") +
+    scale_x_discrete(limits = c("Columbine", "Amish School",
+                                "Virginia Tech", "Sandy Hook",
+                                "Umpqua"))
+
+qplot(event_order, score, data = avg_letter_sentiment, 
+      color = sentiment, geom = "line") + 
+    ggtitle("Letters") + xlab("") +
+    scale_x_discrete(limits = c("Columbine", "Amish School",
+                                "Virginia Tech", "Sandy Hook",
+                                "Umpqua"))
+    
+qplot(event_order, score, data = avg_twitter_sentiment, 
+      color = sentiment, geom = "line") + 
+    ggtitle("Twitter") + xlab("") +
+    scale_x_discrete(limits = c("Columbine", "Amish School",
+                                "Virginia Tech", "Sandy Hook",
+                                "Umpqua"))  
+
+
+
+#anger
+letter_anger <- subset(avg_letter_sentiment, sentiment == 'anger')
+twitter_anger <- subset(avg_twitter_sentiment, sentiment == 'anger')
+# plot(letter_anger$event_order, letter_anger$score)
+# plot(twitter_anger$event_order, twitter_anger$score)
+
+#sadness
+letter_sadness <- subset(avg_letter_sentiment, sentiment == 'sadness')
+twitter_sadness <- subset(avg_twitter_sentiment, sentiment == 'sadness')
+# plot(letter_sadness$event_order, letter_sadness$score)
+# plot(twitter_sadness$event_order, twitter_sadness$score)
+
+#fear
+letter_fear <- subset(avg_letter_sentiment, sentiment == 'fear')
+twitter_fear <- subset(avg_twitter_sentiment, sentiment == 'fear')
+# plot(letter_fear$event_order, letter_fear$score)
+# plot(twitter_fear$event_order, twitter_fear$score)
+
+#disgust
+letter_disgust <- subset(avg_letter_sentiment, sentiment == 'disgust')
+twitter_disgust <- subset(avg_twitter_sentiment, sentiment == 'disgust')
+# plot(letter_disgust$event_order, letter_disgust$score)
+# plot(twitter_disgust$event_order, twitter_disgust$score)
+
+#surprise
+letter_surprise <- subset(avg_letter_sentiment, sentiment == 'surprise')
+twitter_surprise <- subset(avg_twitter_sentiment, sentiment == 'surprise')
+# plot(letter_surprise$event_order, letter_surprise$score)
+# plot(twitter_surprise$event_order, twitter_surprise$score)
+
+
+
+```
+
